@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Norbert Vocabularies</title>
+<style>
+  :root{
+    --bg:#f4f1ea; --card:#fffdf8; --ink:#2b2a27; --muted:#7a766c;
+    --accent:#7a6346; --back:#2f4a5a; --backInk:#f6f3ec; --line:#ddd6c6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 14px 10px}
+  h1{font-size:18px;margin:0 0 8px;letter-spacing:.2px}
+  h1 span{color:var(--muted);font-weight:500;font-size:14px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  input[type=search]{flex:1 1 160px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:15px;background:#fff}
+  select,button{padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;color:var(--ink);cursor:pointer}
+  button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .stats{font-size:13px;color:var(--muted);margin-top:8px}
+  main{padding:14px;max-width:1100px;margin:0 auto}
+  .pagehead{font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin:18px 2px 8px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+  .card{perspective:900px;height:120px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .inner{position:relative;width:100%;height:100%;transition:transform .45s;transform-style:preserve-3d}
+  .card.flipped .inner{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:14px;padding:12px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .front{background:var(--card);border:1px solid var(--line)}
+  .back{background:var(--back);color:var(--backInk);transform:rotateY(180deg)}
+  .lang{position:absolute;top:7px;left:10px;font-size:10px;font-weight:700;letter-spacing:1px;opacity:.55}
+  .word{font-size:15px;font-weight:600;line-height:1.3}
+  .back .word{font-size:16px}
+  .known-mark{position:absolute;top:6px;right:9px;font-size:13px}
+  .card.known .front{border-color:#8bb07a;background:#f3f8ef}
+  .tick{position:absolute;bottom:6px;right:8px;font-size:11px;padding:3px 7px;border-radius:8px;border:1px solid rgba(255,255,255,.4);background:transparent;color:inherit}
+  .empty{color:var(--muted);text-align:center;padding:40px 0}
+  button.scan{background:var(--back);color:#fff;border-color:var(--back);font-weight:600}
+  button.scan:disabled{opacity:.6}
+  .scanstatus{font-size:13px;color:var(--muted)}
+  a.linkbtn{padding:9px 11px;border-radius:10px;font-size:14px;background:var(--back);color:#fff;text-decoration:none;font-weight:600}
+  .panel{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .ptitle{font-weight:700;font-size:14px;margin-bottom:4px}
+  .phint{font-size:13px;color:var(--muted);margin-bottom:8px}
+  .pagehead .del{margin-left:8px;font-size:11px;padding:3px 8px;border-radius:8px;text-transform:none;letter-spacing:0;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Norbert Vocabularies <span>· Unit 8</span></h1>
+  <div class="row">
+    <input type="search" id="q" placeholder="Suchen (Deutsch oder Englisch)…">
+    <select id="page"></select>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <button id="dir">DE → EN</button>
+    <button id="shuffle">Mischen</button>
+    <button id="flipAll">Alle umdrehen</button>
+    <button id="hideKnown">Gelernte ausblenden</button>
+    <button id="reset">Zurücksetzen</button>
+  </div>
+  <div class="row" id="scanRow" style="margin-top:8px">
+    <button id="scanBtn" class="scan">📷 Foto scannen</button>
+    <a id="claudeLink" class="scan linkbtn" href="https://claude.ai/artifact/Hb1RFQJEuwJu6keqETNNH5" target="_blank" rel="noopener" style="display:none">📷 Mit Claude scannen</a>
+    <button id="manualBtn">✏️ Wörter eintippen</button>
+    <button id="keyBtn" style="display:none">🔑 API-Schlüssel</button>
+    <input type="file" id="scanFile" accept="image/*" multiple style="display:none">
+    <span id="scanStatus" class="scanstatus"></span>
+  </div>
+  <div id="keyPanel" class="panel" style="display:none">
+    <div class="ptitle">Anthropic API-Schlüssel</div>
+    <div class="phint">Damit das Scannen außerhalb von Claude funktioniert, brauchst du einen eigenen Schlüssel von console.anthropic.com (kostet ein paar Cent pro Scan). Er wird nur in diesem Browser gespeichert.</div>
+    <div class="row"><input type="password" id="keyInput" placeholder="sk-ant-…" style="flex:1 1 200px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:15px">
+    <button id="keySave" class="scan">Speichern</button><button id="keyClear">Entfernen</button></div>
+  </div>
+  <div id="manualPanel" class="panel" style="display:none">
+    <div class="ptitle">Wörter eintippen</div>
+    <div class="phint">Eine Vokabel pro Zeile: <b>englisch = deutsch</b> (z. B. <i>to nod = nicken</i>)</div>
+    <input type="text" id="manualName" placeholder="Name der Gruppe, z. B. Seite 114" style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:15px;margin-bottom:6px">
+    <textarea id="manualText" rows="6" style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit"></textarea>
+    <div class="row" style="margin-top:6px"><button id="manualSave" class="scan">Hinzufügen</button><button id="manualCancel">Abbrechen</button></div>
+  </div>
+  <div class="stats" id="stats"></div>
+</header>
+<main id="main"></main>
+
+<script>
+const DATA = {
+"106":[
+["whereas","während"],["Back off!","Lass mich in Ruhe! Verschwinde!"],["hug","Umarmung"],
+["to be hysterical with fear","außer sich vor Angst sein"],["helicopter","Hubschrauber"],
+["to approach","sich nähern"],["approach","Näherkommen, Anflug"],["modest","bescheiden"],
+["to play peek-a-boo","guck-guck spielen"]],
+"107":[
+["to pick sth up","sich etw aneignen, etw lernen"],["affection","Zuneigung"],["immediate","unmittelbar, direkt"],
+["suburb","Vorort"],["to level sth","etw dem Erdboden gleichmachen"],["(armed) forces","Streitkräfte"],
+["rebel","Aufständische/r, Rebell/in"],["starvation","Hungertod, Verhungern"],["printer","Drucker/in"],
+["kind","liebenswürdig, freundlich, gütig"],["God willing","so Gott will"],["resettlement","Umsiedlung"]],
+"108":[
+["overseas","im/ins Ausland, in/nach Übersee"],["skilled","qualifiziert"],["all the more so","umso mehr"],
+["to trust sb","jdm vertrauen"],["functional","funktionierend, funktional"],
+["to be familiar with sth","etw kennen, mit etw vertraut sein"],["mask","Maske"],["ease","Mühelosigkeit"],
+["culture clash","Aufeinanderprallen der Kulturen"],["vicious circle","Teufelskreis"],["rebellious","rebellisch"],
+["overpolicing","übermäßige polizeiliche Kontrolle"],["on the whole","im Großen und Ganzen"],
+["remote","abgelegen, entfernt"],["rural","ländlich"],["to be desperate for sb/sth","etw dringend benötigen"],
+["to die","sterben"],["to be in demand","nachgefragt werden"],["affordable","erschwinglich, günstig"],
+["supportive","hilfsbereit"],["to go out of one's way to do sth","sich bei etw besondere Mühe geben"],
+["to learn a lesson from sth","eine Lehre aus etw ziehen"],["to spot sb/sth","jdn/etw erkennen, jdn/etw entdecken"],
+["faceless","gesichtslos, anonym"]],
+"109":[
+["tuition","(Nachhilfe-)Unterricht"],["to distrust sb/sth","jdm/einer Sache misstrauen"],["demoralised","demoralisiert"],
+["to meet sth","etw (Bedingung usw.) erfüllen"],["isolated","abgelegen, abgeschieden"],["placemat","Tischset"],
+["at large","insgesamt, im Allgemeinen"],["to measure sth","etw messen"],["to settle in","sich eingewöhnen"]],
+"110":[
+["hazardous","gefährlich, riskant"],["shade","Schatten"],["bench","Bank"],["to walk by","vorbeilaufen, vorübergehen"],
+["mood","Stimmung, Laune"],["a warm, fuzzy feeling","ein wohliges Gefühl"],["creature of habit","Gewohnheitstier"],
+["to beam","strahlen, (jdn) anstrahlen"],["against sb's better judgement","wider besseres Wissen"],["instance","Fall"],
+["windy","windig"],["to nod","nicken"],["to circle","kreisen"],["sth is lost on sb","jd kann mit etw nichts anfangen"],
+["in any case","jedenfalls, in jedem Fall"],["to muster sth","etw aufbringen"],["to blow sth up","etw in die Luft sprengen/jagen"],
+["patient(ly)","geduldig"],["to drag sb into sth","jdn in etw hineinziehen"],["to commit sth","etw (Tat usw.) begehen"],
+["apparently","anscheinend"],["scripture","Schrift, Bibeltext"],["redhead","Rothaarige/r"],
+["to proceed to do sth","etw als nächstes tun"],["scarf","Halstuch, Kopftuch, Schal"],["stern(ly)","streng, ernst"]],
+"111":[
+["That's not on.","Das geht (gar) nicht."],["annoyance","Verärgerung, Ärger"],["to refute sth","etw entkräften, etw widerlegen"],
+["attire","Kleidung"],["to occur to sb","jdm einfallen"],["appreciation","Wertschätzung, Würdigung"],
+["jacket potato","Ofenkartoffel, Folienkartoffel"],["terminology","Begriffe, Terminologie"],["gleeful(ly)","freudig, fröhlich"],
+["apparent","offensichtlich, scheinbar"],["mental construction","geistiges Konstrukt"],["childhood","Kindheit"],
+["inclination","Neigung"],["to think twice","es sich gut überlegen"],["to compliment sth","ein Kompliment über etw machen"],
+["headgear","Kopfbedeckung"],["spokesperson","(offizielle/r) Sprecher/in"],["to go about sb's business","seinen Geschäften nachgehen"],
+["to contrast sth with sth","etw einander gegenüberstellen, etw miteinander vergleichen"],["to interpret sth","etw interpretieren"],
+["remark","Bemerkung"]],
+"112":[
+["Go ahead.","Leg los! Bitteschön!"],["to be around","da sein, (es) geben"],["to help sb out","jdm helfen"],
+["stuff","Sachen, Zeug"],["to break in","einbrechen"],["lease","Mietvertrag"],["landlord","Vermieter/in"],
+["prisoner","Gefangene/r, Häftling"],["demeanour","Auftreten, Verhalten"],["fireworks","Feuerwerk"],
+["pickup","Pritschenwagen"],["Confederate","Konföderierten-, Südstaaten-"],["flag","Flagge"],["hood","Motorhaube"],
+["to reckon","meinen, glauben"],["to tell the difference","den Unterschied erkennen"],["Islamophobia","Islamfeindlichkeit"],
+["sidewalk (AE)","Bürgersteig, Gehweg"],["threatening","bedrohlich"],["eye contact","Blickkontakt"],
+["to zipper","mit dem Reißverschluss verschließen"],["harmless","harmlos"],["offensive","beleidigend, anstößig"],
+["to defuse sth","etw entschärfen"],["to occur","vorkommen, auftreten"],["to enable sth","etw möglich machen"],
+["immunity","Immunität"],["to thrust","stoßen, schieben"],["echelon","Rang, (Gesellschafts-)Schicht"],
+["to prosecute sb","jdn strafrechtlich verfolgen"],["military","Militär"],["unjust(ly)","ungerecht"],
+["happening","Ereignis, Vorfall"],["killing","Ermordung, Tötung"],["air force","Luftwaffe"],["officer","Offizier/in"],
+["original(ly)","ursprünglich"],["hatred","Hass"],["to disadvantage sb","jdn benachteiligen"],
+["to fear for sth","um etw fürchten"],["police officer","Polizeibeamter/-beamtin"],
+["supporter","Anhänger/in, Unterstützer/in"],["grid","Raster, Tabelle"]],
+"113":[
+["overtness","Offenheit"],["implicit","indirekt, unausgesprochen, implizit"],["reserved","zurückhaltend, reserviert"]]
+};
+
+const store = {get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+               set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let known = new Set(store.get("u8known2",[]));
+let custom = store.get("u8custom",[]); // [{name, words:[[en,de],...]}]
+let state = {q:"",page:"all",deFirst:true,shuffled:null,hideKnown:false,flipped:new Set()};
+
+let cards=[], order0=[], groupsDef=[];
+function build(){
+  cards=[]; groupsDef=[];
+  const add=(gid,label,words,customIdx)=>{
+    groupsDef.push({gid,label,count:words.length,customIdx});
+    for(const [en,de] of words) cards.push({id:cards.length,key:gid+"|"+en+"|"+de,page:gid,en,de});
+  };
+  for(const p in DATA) add(p,"Seite "+p,DATA[p]);
+  custom.forEach((s,i)=>add("scan"+i,s.name,s.words,i));
+  order0=cards.map(c=>c.id);
+  const sel=document.getElementById("page");
+  sel.innerHTML='<option value="all">Alle Seiten</option>'+groupsDef.map(g=>`<option value="${g.gid}">${esc(g.label)} (${g.count})</option>`).join("");
+  if(!groupsDef.some(g=>g.gid===state.page)) state.page="all";
+  sel.value=state.page;
+}
+const sel=document.getElementById("page");
+
+function esc(s){return s.replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]))}
+
+function render(){
+  const q=state.q.toLowerCase();
+  let list=(state.shuffled||order0).map(i=>cards[i]).filter(c=>
+    (state.page==="all"||c.page===state.page) &&
+    (!q||c.en.toLowerCase().includes(q)||c.de.toLowerCase().includes(q)) &&
+    (!state.hideKnown||!known.has(c.key)));
+  const main=document.getElementById("main");
+  if(!list.length){main.innerHTML='<div class="empty">Keine Karten gefunden.</div>';}
+  else{
+    const groups = state.shuffled ? [["Gemischt",list]] :
+      groupsDef.map(g=>[esc(g.label)+(g.customIdx!==undefined?` <button class="del" data-del="${g.customIdx}">Löschen</button>`:""),list.filter(c=>c.page===g.gid)]).filter(g=>g[1].length);
+    main.innerHTML=groups.map(([t,arr])=>`<div class="pagehead">${t}</div><div class="grid">`+arr.map(c=>{
+      const f=state.deFirst?["DE",c.de]:["EN",c.en], b=state.deFirst?["EN",c.en]:["DE",c.de];
+      const k=known.has(c.key);
+      return `<div class="card${state.flipped.has(c.id)?" flipped":""}${k?" known":""}" data-id="${c.id}">
+        <div class="inner">
+          <div class="face front"><span class="lang">${f[0]}</span>${k?'<span class="known-mark">✓</span>':''}<div class="word">${esc(f[1])}</div></div>
+          <div class="face back"><span class="lang">${b[0]}</span><div class="word">${esc(b[1])}</div>
+            <button class="tick" data-tick="${c.id}">${k?"✓ Gelernt":"Gelernt?"}</button></div>
+        </div></div>`}).join("")+`</div>`).join("");
+  }
+  document.getElementById("stats").textContent=
+    `${list.length} Karten angezeigt · ${cards.length} insgesamt · ${known.size} gelernt`;
+  document.getElementById("dir").textContent=state.deFirst?"DE → EN":"EN → DE";
+  document.getElementById("shuffle").classList.toggle("on",!!state.shuffled);
+  document.getElementById("hideKnown").classList.toggle("on",state.hideKnown);
+}
+
+document.getElementById("main").addEventListener("click",e=>{
+  const d=e.target.closest("[data-del]");
+  if(d){const i=+d.dataset.del;
+    if(d.dataset.confirm){custom.splice(i,1);store.set("u8custom",custom);build();render();}
+    else{d.dataset.confirm="1";d.textContent="Wirklich löschen?";}
+    return;}
+  const t=e.target.closest("[data-tick]");
+  if(t){e.stopPropagation();const k=cards[+t.dataset.tick].key;known.has(k)?known.delete(k):known.add(k);store.set("u8known2",[...known]);render();return;}
+  const c=e.target.closest(".card"); if(!c) return;
+  const i=+c.dataset.id; state.flipped.has(i)?state.flipped.delete(i):state.flipped.add(i);
+  c.classList.toggle("flipped");
+});
+document.getElementById("q").oninput=e=>{state.q=e.target.value;render()};
+sel.onchange=e=>{state.page=e.target.value;render()};
+document.getElementById("dir").onclick=()=>{state.deFirst=!state.deFirst;state.flipped.clear();render()};
+document.getElementById("shuffle").onclick=()=>{
+  if(state.shuffled){state.shuffled=null}else{const a=[...order0];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}state.shuffled=a}
+  state.flipped.clear();render()};
+document.getElementById("flipAll").onclick=()=>{
+  const vis=[...document.querySelectorAll(".card")].map(c=>+c.dataset.id);
+  const allF=vis.every(i=>state.flipped.has(i));
+  vis.forEach(i=>allF?state.flipped.delete(i):state.flipped.add(i));render()};
+document.getElementById("hideKnown").onclick=()=>{state.hideKnown=!state.hideKnown;render()};
+document.getElementById("reset").onclick=()=>{state.flipped.clear();state.shuffled=null;state.q="";document.getElementById("q").value="";render()};
+
+// ---------- Foto scannen ----------
+const scanBtn=document.getElementById("scanBtn"), scanFile=document.getElementById("scanFile"), scanStatus=document.getElementById("scanStatus");
+let sample=null;
+function shrink(file){
+  return new Promise((res,rej)=>{
+    const img=new Image(), url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const max=2000, s=Math.min(1,max/Math.max(img.width,img.height));
+      const c=document.createElement("canvas"); c.width=Math.round(img.width*s); c.height=Math.round(img.height*s);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+      c.toBlob(b=>b?res(b):rej(new Error("Bild konnte nicht gelesen werden")),"image/jpeg",0.88);
+    };
+    img.onerror=()=>rej(new Error("Bild konnte nicht gelesen werden"));
+    img.src=url;
+  });
+}
+const PROMPT=`You are reading photos of a vocabulary list from an English textbook used by German students.
+Extract EVERY vocabulary entry you can see. For each entry return the English word or phrase (bold column, without the phonetic transcription in brackets) and the German translation (usually the italic column on the right). Ignore the English explanation column, page numbers and headings.
+Return ONLY JSON in this exact shape, nothing else:
+{"title":"short label, e.g. the page numbers you see like 'Seite 114–115', or 'Scan' if none","words":[{"en":"...","de":"..."}]}`;
+const $=id=>document.getElementById(id);
+const toggle=(id,show)=>{$(id).style.display=show?"block":"none"};
+function getKey(){return store.get("u8apikey","")}
+
+function addGroup(name,words){
+  custom.push({name,words}); store.set("u8custom",custom);
+  build(); state.page="scan"+(custom.length-1); sel.value=state.page; state.shuffled=null; render();
+}
+function blobToBase64(b){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(",")[1]);fr.readAsDataURL(b)})}
+function parseJson(text){const a=text.indexOf("{"),b=text.lastIndexOf("}");if(a<0||b<a)throw new Error("Antwort nicht lesbar");return JSON.parse(text.slice(a,b+1))}
+
+async function scanWithApi(images,key){
+  const content=[];
+  for(const im of images) content.push({type:"image",source:{type:"base64",media_type:"image/jpeg",data:await blobToBase64(im)}});
+  content.push({type:"text",text:PROMPT});
+  const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+    headers:{"x-api-key":key,"anthropic-version":"2023-06-01","content-type":"application/json","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:"claude-sonnet-5-5",max_tokens:8000,messages:[{role:"user",content}]})});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(r.status===401?"API-Schlüssel ist ungültig":(j.error&&j.error.message)||("HTTP "+r.status));
+  return parseJson((j.content||[]).map(c=>c.text||"").join(""));
+}
+
+scanBtn.onclick=()=>{
+  if(!sample && !getKey()){toggle("keyPanel",true);scanStatus.textContent="Zum Scannen bitte zuerst einen API-Schlüssel eintragen.";return;}
+  scanFile.click();
+};
+scanFile.onchange=async()=>{
+  const files=[...scanFile.files]; scanFile.value="";
+  if(!files.length) return;
+  scanBtn.disabled=true; scanStatus.textContent="Bild wird gescannt… (kann ca. 30 Sek. dauern)";
+  try{
+    const images=await Promise.all(files.map(shrink));
+    let out;
+    if(sample){
+      const lim=await sample.limits().catch(()=>({images:true}));
+      if(lim && lim.images===false) throw {message:"Bilder werden hier nicht unterstützt."};
+      out=await sample.json(PROMPT,{images,modelTier:"default"});
+    } else out=await scanWithApi(images,getKey());
+    const words=(out&&out.words||[]).filter(w=>w&&w.en&&w.de).map(w=>[String(w.en).trim(),String(w.de).trim()]);
+    if(!words.length){scanStatus.textContent="Keine Vokabeln erkannt. Versuch ein schärferes Foto.";return;}
+    const name=(out.title&&String(out.title).trim())||("Scan "+(custom.length+1));
+    addGroup(name,words);
+    scanStatus.textContent=`✓ ${words.length} Vokabeln hinzugefügt („${name}“)`;
+  }catch(err){
+    if(err&&err.code==="not_granted"){scanStatus.textContent="Scannen wurde nicht erlaubt.";}
+    else if(err&&err.code==="rate_limited"){scanStatus.textContent="Zu viele Anfragen – bitte kurz warten.";}
+    else scanStatus.textContent="Fehler beim Scannen: "+((err&&err.message)||"unbekannt");
+  }finally{scanBtn.disabled=false;}
+};
+
+$("keyBtn").onclick=()=>{$("keyInput").value=getKey();toggle("keyPanel",$("keyPanel").style.display==="none")};
+$("keySave").onclick=()=>{const k=$("keyInput").value.trim();if(!k)return;store.set("u8apikey",k);toggle("keyPanel",false);if(!sample)scanBtn.style.display="";scanStatus.textContent="✓ Schlüssel gespeichert – du kannst jetzt scannen.";};
+$("keyClear").onclick=()=>{try{localStorage.removeItem("u8apikey")}catch(e){};if(!sample)scanBtn.style.display="none";$("keyInput").value="";scanStatus.textContent="Schlüssel entfernt.";};
+
+$("manualBtn").onclick=()=>toggle("manualPanel",$("manualPanel").style.display==="none");
+$("manualCancel").onclick=()=>toggle("manualPanel",false);
+$("manualSave").onclick=()=>{
+  const words=$("manualText").value.split("\n").map(l=>l.split(/\s*(?:=|;|\t| - )\s*/)).filter(p=>p.length>=2&&p[0].trim()&&p[1].trim()).map(p=>[p[0].trim(),p.slice(1).join(", ").trim()]);
+  if(!words.length){scanStatus.textContent="Keine Zeilen im Format „englisch = deutsch“ gefunden.";return;}
+  const name=$("manualName").value.trim()||("Eigene Wörter "+(custom.length+1));
+  addGroup(name,words); $("manualText").value=""; $("manualName").value=""; toggle("manualPanel",false);
+  scanStatus.textContent=`✓ ${words.length} Vokabeln hinzugefügt („${name}“)`;
+};
+
+(async()=>{
+  try{ if(window.claude&&claude.use){ sample=await claude.use("sample"); } }catch(e){}
+  if(!sample){
+    $("keyBtn").style.display="";
+    $("claudeLink").style.display="";
+    if(!getKey()) scanBtn.style.display="none";
+    else scanBtn.textContent="📷 Scannen mit API-Schlüssel";
+  }
+})();
+
+build();
+render();
+</script>
+</body>
+</html>
